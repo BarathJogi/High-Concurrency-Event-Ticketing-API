@@ -1,0 +1,11 @@
+#spring:
+#  application:
+#    name: TicketingApi
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ticketingapi
+    username: postgres
+    password: jogidb
+  jpa:
+    hibernate:
+      ddl-auto: validate # STRICT RULE: Never 'update' or 'create'
