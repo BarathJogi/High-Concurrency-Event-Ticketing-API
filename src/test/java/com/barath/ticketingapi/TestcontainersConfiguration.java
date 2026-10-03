@@ -1,4 +1,4 @@
-package com.barath.TicketingApi;
+package com.barath.ticketingapi;
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;

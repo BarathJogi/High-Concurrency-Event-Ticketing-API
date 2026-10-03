@@ -1,4 +1,4 @@
-package com.barath.TicketingApi;
+package com.barath.ticketingapi;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

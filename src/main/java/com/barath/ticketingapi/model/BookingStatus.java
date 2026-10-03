@@ -1,4 +1,4 @@
-package com.barath.TicketingApi.model;
+package com.barath.ticketingapi.model;
 
 public enum BookingStatus {
     PENDING,
