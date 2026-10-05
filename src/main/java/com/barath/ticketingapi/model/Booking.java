@@ -22,11 +22,22 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+//    @Column(name = "user_id", nullable = false)
+//    private Long userId;
+//
+//    @Column(name = "seat_id", nullable = false)
+//    private Long seatId;
 
-    @Column(name = "seat_id", nullable = false)
-    private Long seatId;
+    // Changed from Long to User, and used @ManyToOne mapping
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    // Changed from Long to Seat, and used @ManyToOne mapping
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "seat_id", nullable = false)
+    private Seat seat;
+
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
