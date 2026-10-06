@@ -76,4 +76,68 @@ public class BookingService {
             throw e;
         }
     }
+
+
+    @Transactional
+    public Booking confirmBooking(Long bookingId, String idempotencyKey) {
+
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        // Idempotency check: prevent duplicate charges on network retries
+        if(BookingStatus.CONFIRMED.equals(booking.getStatus()) && idempotencyKey.equals(booking.getIdempotencyKey())){
+            return booking;
+        }
+
+
+        if(booking.getStatus() != BookingStatus.PENDING){
+            throw new RuntimeException("Booking is no longer valid or expired");
+        }
+
+        // Confirm booking and attach idempotency key
+        booking.setIdempotencyKey(idempotencyKey);
+        booking.setStatus(BookingStatus.CONFIRMED);
+
+        // Permanently assign the seat and remove the hold timer
+        Seat seat = booking.getSeat();
+        seat.setStatus(SeatStatus.BOOKED);
+        seat.setHoldExpiresAt(null);
+
+
+        return bookingRepository.save(booking);
+
+    }
+
+    @Transactional
+    public Booking cancelBooking(Long bookingId){
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if(booking.getStatus() == BookingStatus.CANCELLED){
+            return booking;
+        }
+
+        // We only allow cancelling PENDING holds
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new RuntimeException("Only pending bookings can be cancelled.");
+        }
+
+        // Update Booking Status
+        booking.setStatus(BookingStatus.CANCELLED);
+
+        // Free up seat
+        Seat seat = booking.getSeat();
+        seat.setStatus(SeatStatus.AVAILABLE);
+        seat.setHoldExpiresAt(null);
+
+        // CRITICAL: Release the Redis Lock
+        // If we don't do this, the DB says AVAILABLE, but Redis still blocks it for the rest of the 10 minutes.
+        redisLockService.releaseHold(seat.getId());
+
+        return bookingRepository.save(booking);
+
+    }
+
 }
