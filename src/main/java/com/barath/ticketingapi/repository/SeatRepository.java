@@ -1,5 +1,6 @@
 package com.barath.ticketingapi.repository;
 
+import com.barath.ticketingapi.model.Event;
 import com.barath.ticketingapi.model.Seat;
 import com.barath.ticketingapi.model.SeatStatus;
 import jakarta.persistence.LockModeType;
@@ -22,4 +23,5 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
 
     List<Seat> findByStatusAndHoldExpiresAtBefore(SeatStatus status, java.time.OffsetDateTime time);
 
+    List<Seat> findByEventId(Long eventId);
 }
