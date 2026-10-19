@@ -37,8 +37,10 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/events/**").permitAll()
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/events/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/events/*/seats/*/hold").authenticated()  // specific first
+                        .requestMatchers(HttpMethod.POST, "/events/**").hasRole("ADMIN")             // general after
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

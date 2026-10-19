@@ -35,7 +35,7 @@ public class AuthService {
         user.setName(request.name());
         user.setEmail(request.email());
         user.setPasswordHash(passwordEncoder.encode(request.password())); // NEVER store plain text!
-        user.setRole(UserRole.valueOf(request.role().toUpperCase()));
+        user.setRole(UserRole.USER); // Hardcoded safely on the server side
 
         // 2. Save to database
         userRepository.save(user);
