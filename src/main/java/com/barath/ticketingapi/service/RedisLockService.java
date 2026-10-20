@@ -1,9 +1,12 @@
 package com.barath.ticketingapi.service;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.Collections;
 
 @Service
 public class RedisLockService {
@@ -43,14 +46,23 @@ public class RedisLockService {
      //Crucial for rollback scenarios: if the PostgreSQL database fails to save the hold,
      //we must immediately clear the Redis key so the seat doesn't become a "ghost lock".
 
-    public boolean releaseHold(Long seatId) {
+    public boolean releaseHold(Long seatId, Long userId) {
         String key = "seat:hold:" + seatId;
+        String value = String.valueOf(userId);
 
-        // Deletes the key from Redis, freeing up the seat for other users instantly.
-        Boolean deleted = redisTemplate.delete(key);
+        // This Lua script checks if the key's value matches the userId.
+        // If it matches, it deletes the key. If not, it does nothing and returns 0.
+        String scriptText = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
+                "return redis.call('del', KEYS[1]) " +
+                "else return 0 end";
 
-        // Safe unboxing to prevent NullPointerExceptions
-        return Boolean.TRUE.equals(deleted);
+        RedisScript<Long> script = new DefaultRedisScript<>(scriptText, Long.class);
+
+        // Execute the script atomically in Redis
+        Long result = redisTemplate.execute(script, Collections.singletonList(key), value);
+
+        // If result is 1, we successfully deleted OUR lock. If 0, we didn't own it.
+        return result != null && result > 0L;
     }
 
 }

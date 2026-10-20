@@ -1,8 +1,6 @@
 package com.barath.ticketingapi.service;
 
 
-import com.barath.ticketingapi.model.Seat;
-import com.barath.ticketingapi.model.SeatStatus;
 import com.barath.ticketingapi.repository.SeatRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
-import java.util.List;
+
 
 @Service
 public class SeatReaperService {
@@ -29,23 +27,12 @@ public class SeatReaperService {
     public void releaseExpiredHolds(){
         OffsetDateTime now = OffsetDateTime.now();
 
-        // Ask the database for all seats that are HELD where the expiration time has already passed
-        List<Seat> expiredSeats = seatRepository.findByStatusAndHoldExpiresAtBefore(SeatStatus.HELD, now);
+        // Executes a single, lightning-fast SQL UPDATE query directly in Postgres.
+        // Bypasses JPA entity generation entirely, saving massive amounts of JVM memory.
+        int releasedCount = seatRepository.releaseExpiredHolds(now);
 
-        // If no seats are expired, just stop here. No need to do any work!
-        if (expiredSeats.isEmpty()) {
-            return;
+        if (releasedCount > 0) {
+            log.info("Reaper executed: Released {} expired seat holds back to AVAILABLE", releasedCount);
         }
-
-        // Loop through the list of expired seats we got from the database
-        for (Seat seat : expiredSeats) {
-            // Reset them to AVAILABLE and clear the timer
-            seat.setStatus(SeatStatus.AVAILABLE);
-            seat.setHoldExpiresAt(null);
-        }
-
-        seatRepository.saveAll(expiredSeats);
-
-        log.info("Reaper executed: Released {} expired seat holds back to AVAILABLE", expiredSeats.size());
     }
 }

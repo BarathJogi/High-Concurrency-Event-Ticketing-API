@@ -1,5 +1,6 @@
 package com.barath.ticketingapi.service;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import com.barath.ticketingapi.dto.AuthResponse;
 import com.barath.ticketingapi.dto.LoginRequest;
@@ -11,6 +12,7 @@ import com.barath.ticketingapi.security.JwtService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.server.ResponseStatusException;
 
 
 @Service
@@ -30,32 +32,38 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest request) {
-        // 1. Create the user entity
+
+        // Prevent 500 crashes by checking for duplicates cleanly
+        if (userRepository.existsByEmail(request.email())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use");
+        }
+
+        // Create the user entity
         User user = new User();
         user.setName(request.name());
         user.setEmail(request.email());
         user.setPasswordHash(passwordEncoder.encode(request.password())); // NEVER store plain text!
         user.setRole(UserRole.USER); // Hardcoded safely on the server side
 
-        // 2. Save to database
+        // Save to database
         userRepository.save(user);
 
-        // 3. Generate the JWT token
+        // Generate the JWT token
         String jwtToken = jwtService.generateToken(user);
         return new AuthResponse(jwtToken);
     }
 
     public AuthResponse login(LoginRequest request) {
-        // 1. Let Spring Security check the password against the hashed DB password
+        // Let Spring Security check the password against the hashed DB password
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
 
-        // 2. If we reach this line, the password was correct. Fetch the user.
+        // If we reach this line, the password was correct. Fetch the user.
         User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        // 3. Generate and return a new JWT token
+        // Generate and return a new JWT token
         String jwtToken = jwtService.generateToken(user);
         return new AuthResponse(jwtToken);
     }
