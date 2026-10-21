@@ -4,6 +4,7 @@ import com.barath.ticketingapi.dto.AuthResponse;
 import com.barath.ticketingapi.dto.LoginRequest;
 import com.barath.ticketingapi.dto.RegisterRequest;
 import com.barath.ticketingapi.service.AuthService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,13 +24,13 @@ public class AuthController {
 
     // to register
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request){
-        return ResponseEntity.ok(authService.register(request));
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request){
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
 
     // to login
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request){
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request){
         return ResponseEntity.ok(authService.login(request));
     }
 

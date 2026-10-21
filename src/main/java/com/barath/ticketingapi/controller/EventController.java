@@ -1,8 +1,14 @@
 package com.barath.ticketingapi.controller;
 
+import com.barath.ticketingapi.dto.EventCreateRequest;
 import com.barath.ticketingapi.model.Event;
 import com.barath.ticketingapi.model.Seat;
 import com.barath.ticketingapi.service.EventService;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,14 +31,16 @@ public class EventController {
     }
 
     // PUBLIC: Anyone can check seat availability
+    // FIXED: Requires Pageable to prevent OutOfMemory crashes on large venues
     @GetMapping("/{eventId}/seats")
-    public ResponseEntity<List<Seat>> getSeatsForEvent(@PathVariable Long eventId) {
-        return ResponseEntity.ok(eventService.getSeatsForEvent(eventId));
+    public ResponseEntity<Page<Seat>> getSeatsForEvent(@PathVariable Long eventId, @PageableDefault(size = 100) Pageable pageable) {
+        return ResponseEntity.ok(eventService.getSeatsForEvent(eventId, pageable));
     }
 
     // ADMIN ONLY: Our SecurityConfig blocks normal users from hitting this POST route
+    // FIXED: Uses DTO to prevent Mass Assignment, @Valid for data integrity, 201 CREATED status
     @PostMapping
-    public ResponseEntity<Event> createEvent(@RequestBody Event event) {
-        return ResponseEntity.ok(eventService.createEvent(event));
+    public ResponseEntity<Event> createEvent(@Valid @RequestBody EventCreateRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(eventService.createEvent(request));
     }
 }
