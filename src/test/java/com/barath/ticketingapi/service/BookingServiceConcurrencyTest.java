@@ -5,16 +5,12 @@ import com.barath.ticketingapi.repository.BookingRepository;
 import com.barath.ticketingapi.repository.EventRepository;
 import com.barath.ticketingapi.repository.SeatRepository;
 import com.barath.ticketingapi.repository.UserRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-
+import org.springframework.context.annotation.Import;
+import com.barath.ticketingapi.TestcontainersConfiguration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -23,28 +19,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest
-@Testcontainers
+@Import(TestcontainersConfiguration.class)
 public class BookingServiceConcurrencyTest {
 
-    // Boot up a real PostgreSQL container just for this test
-    @Container
-    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:15-alpine");
-
-    // Boot up a real Redis container
-    @Container
-    static GenericContainer redis = new GenericContainer("redis:7-alpine")
-            .withExposedPorts(6379);
-
-    // Tell Spring Boot to use these dynamic Docker URLs instead of your local application.properties
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-
-        registry.add("spring.data.redis.host", redis::getHost);
-        registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
-    }
 
     @Autowired
     private BookingService bookingService;
@@ -56,6 +33,15 @@ public class BookingServiceConcurrencyTest {
     private EventRepository eventRepository;
     @Autowired
     private BookingRepository bookingRepository;
+
+    @AfterEach
+    void tearDown() {
+        // Prevents test bleeding by wiping the DB after execution
+        bookingRepository.deleteAll();
+        seatRepository.deleteAll();
+        eventRepository.deleteAll();
+        userRepository.deleteAll();
+    }
 
     @Test
     void testConcurrentSeatHold() throws InterruptedException{
@@ -115,6 +101,8 @@ public class BookingServiceConcurrencyTest {
 
         // Wait for all 500 threads to finish processing
         finishLine.await();
+
+        executor.shutdown();
 
         // ASSERT: The mathematical proof that your locks work
         assertEquals(1, successfulHolds.get(), "Only ONE request should ever succeed");

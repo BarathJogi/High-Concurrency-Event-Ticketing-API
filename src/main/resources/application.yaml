@@ -1,11 +1,25 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/ticketingapi
-    username: postgres
-    password: jogidb
+    # CRITICAL: reWriteBatchedInserts forces Postgres to compress inserts into a single statement
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/ticketingapi?reWriteBatchedInserts=true
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:jogidb}
   jpa:
-    show-sql: true
+    show-sql: false # Turn off in production to prevent terminal freezing on 50,000 inserts
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 100
+          # REQUIRED: Allows batching for the Seat entity despite the @Version annotation
+          batch_versioned_data: true
+        order_inserts: true
+        order_updates: true
   flyway:
-    validate-on-migrate: false
+    validate-on-migrate: true # Never turn this off in production
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+

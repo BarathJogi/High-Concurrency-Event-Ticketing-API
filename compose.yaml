@@ -1,4 +1,22 @@
 services:
+  api:
+    build: .
+    container_name: ticketing-api
+    ports:
+      - "8080:8080"
+    environment:
+      # These map perfectly to the variables we set in your application.yaml
+      - DB_HOST=postgres
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=jogidb
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   postgres:
     image: postgres:16-alpine
     container_name: ticketing-postgres
@@ -8,9 +26,25 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: jogidb
       POSTGRES_DB: ticketingapi
+    volumes:
+      # Saves your database physically to the host machine so it survives restarts
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ticketingapi"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     container_name: ticketing-redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
