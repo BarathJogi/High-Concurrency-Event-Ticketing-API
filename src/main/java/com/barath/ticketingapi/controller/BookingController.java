@@ -3,10 +3,12 @@ package com.barath.ticketingapi.controller;
 import com.barath.ticketingapi.model.Booking;
 import com.barath.ticketingapi.model.User;
 import com.barath.ticketingapi.repository.BookingRepository;
+import com.barath.ticketingapi.repository.UserRepository;
 import com.barath.ticketingapi.service.BookingService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,10 +19,12 @@ public class BookingController {
 
     private final BookingService bookingService;
     private final BookingRepository bookingRepository;
+    private final UserRepository userRepository;
 
-    public BookingController(BookingService bookingService, BookingRepository bookingRepository) {
+    public BookingController(BookingService bookingService, BookingRepository bookingRepository, UserRepository userRepository) {
         this.bookingService = bookingService;
         this.bookingRepository = bookingRepository;
+        this.userRepository = userRepository;
     }
 
     // Exposes the highly optimized "My Tickets" query to the frontend
@@ -32,9 +36,13 @@ public class BookingController {
     @PostMapping("/hold")
     public ResponseEntity<Booking> holdSeat(
             @RequestParam Long seatId,
-            @AuthenticationPrincipal User currentUser) { // IDOR Vulnerability closed. Identity comes from JWT.
+            @AuthenticationPrincipal UserDetails userDetails) {
 
-        Booking booking = bookingService.holdSeat(seatId, currentUser.getId());
+        // Extract identity safely and fetch the database ID
+        User user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Booking booking = bookingService.holdSeat(seatId, user.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(booking);
     }
 
