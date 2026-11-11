@@ -3,6 +3,9 @@ FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /app
 COPY .mvn/ .mvn
 COPY mvnw pom.xml ./
+
+# FIX: Ensure the Maven wrapper is executable (Critical for Windows hosts)
+RUN chmod +x ./mvnw
 # Cache dependencies to speed up subsequent builds
 RUN ./mvnw dependency:go-offline
 COPY src ./src

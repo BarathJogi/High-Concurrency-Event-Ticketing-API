@@ -33,9 +33,15 @@ public class BookingServiceConcurrencyTest {
     private EventRepository eventRepository;
     @Autowired
     private BookingRepository bookingRepository;
+    @Autowired
+    private org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
 
     @AfterEach
     void tearDown() {
+
+        // Flush the Redis cache to prevent state bleeding between tests
+        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
+
         // Prevents test bleeding by wiping the DB after execution
         bookingRepository.deleteAll();
         seatRepository.deleteAll();
@@ -57,7 +63,7 @@ public class BookingServiceConcurrencyTest {
         event.setName("Champions League Final");
         event.setVenue("Wembley Stadium");
         event.setEventDate(java.time.OffsetDateTime.now().plusDays(30));
-        event.setTotalSeats(50000);
+        event.setTotalSeats(10000);
         event = eventRepository.save(event);
 
         Seat seat = new Seat();
